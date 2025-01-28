@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -9,9 +10,24 @@ import (
 )
 
 const outputFile = "code_dump.md"
-const excludedDirs = "logs:pkg" // Add directories to exclude, separated by ':'
+
+// Directories to exclude
+const excludedDirs = "logs:pkg"
+
+// Supported file extensions and their markdown fencing language
+var includedExtensions = map[string]string{
+	".go":  "go",        // Go files
+	".md":  "markdown",  // Markdown files
+	".mod": "plaintext", // Go mod files
+	".sum": "plaintext", // Go sum files
+	".sql": "sql",       // SQL files
+}
 
 func main() {
+	// Parse command-line flags
+	allFiles := flag.Bool("all", false, "Include all supported non-binary files, not just Go files")
+	flag.Parse()
+
 	// Open the output markdown file
 	output, err := os.Create(outputFile)
 	if err != nil {
@@ -38,10 +54,23 @@ func main() {
 			return filepath.SkipDir
 		}
 
-		// Process only Go files
-		if filepath.Ext(path) == ".go" {
-			if err := processFile(path, output); err != nil {
-				return fmt.Errorf("error processing file %s: %v", path, err)
+		// Get file extension
+		ext := filepath.Ext(path)
+
+		// Process files based on the --all flag
+		if *allFiles {
+			// Include all supported file types
+			if lang, ok := includedExtensions[ext]; ok {
+				if err := processFile(path, lang, output); err != nil {
+					return fmt.Errorf("error processing file %s: %v", path, err)
+				}
+			}
+		} else {
+			// Only include Go files by default
+			if ext == ".go" {
+				if err := processFile(path, "go", output); err != nil {
+					return fmt.Errorf("error processing file %s: %v", path, err)
+				}
 			}
 		}
 		return nil
@@ -55,8 +84,8 @@ func main() {
 	fmt.Println("Code dump generated:", outputFile)
 }
 
-// processFile reads the content of a Go file and writes it to the output file with fenced markdown
-func processFile(path string, output io.Writer) error {
+// processFile reads the content of a file and writes it to the output file with fenced markdown
+func processFile(path, lang string, output io.Writer) error {
 	// Read the file content
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -64,7 +93,7 @@ func processFile(path string, output io.Writer) error {
 	}
 
 	// Write the file path and fenced code block to the output file
-	_, err = fmt.Fprintf(output, "\n### %s\n\n```go\n%s\n```\n", path, string(content))
+	_, err = fmt.Fprintf(output, "\n### %s\n\n```%s\n%s\n```\n", path, lang, string(content))
 	if err != nil {
 		return fmt.Errorf("error writing to output file: %v", err)
 	}
