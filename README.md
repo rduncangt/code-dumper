@@ -34,21 +34,24 @@ Example for Go File
 
 ```go
 // Code content
-
+```
 
 ### Example for Markdown File
+
 ```markdown
 ### ./path/to/file.md
+```
 
 ```markdown
 # Markdown Title
 
 Some content here.
-
+```
 
 ## Supported File Types
 
 By default, only `.go` files are processed. With the `--all` flag, the following file types are included:
+
 - `.go` → `go`
 - `.md` → `markdown`
 - `.mod`, `.sum` → `plaintext`
